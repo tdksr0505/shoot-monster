@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shoot Monster!</title>
+    <style>
+        body {
+            /* overflow: hidden; */
+        }
+
+        * {
+            padding: 0;
+            margin: 0;
+        }
+
+        #gameDiv {
+            width: 100%;
+            height: 100vh;
+            /* height: 500px; */
+        }
+    </style>
+</head>
+
+<body>
+    <div id="gameDiv"></div>
+</body>
+<script src="js/pixi.min.js"></script>
+<script type="text/javascript">
+    window.onload = function () {
+        //Create a Pixi Application
+        let app = new PIXI.Application({
+            width: 800,
+            height: window.innerHeight,
+            backgroundColor: 0xffffff
+        }
+        );
+        app.renderer.resize(document.querySelector('#gameDiv').offsetWidth, document.querySelector('#gameDiv').offsetHeight);
+        document.querySelector('#gameDiv').appendChild(app.view);
+        let startContainer = new PIXI.Container();
+        let gameContainer = new PIXI.Container();
+        let gameOverContainer = new PIXI.Container();
+
+        app.stage.addChild(gameContainer);
+        app.stage.addChild(startContainer);
+        app.stage.addChild(gameOverContainer);
+
+
+        let playerWalkFrame = [
+            "images/player-sprite/Wraith_01_Moving Forward_000.png",
+            "images/player-sprite/Wraith_01_Moving Forward_001.png",
+            "images/player-sprite/Wraith_01_Moving Forward_002.png",
+            "images/player-sprite/Wraith_01_Moving Forward_003.png",
+            "images/player-sprite/Wraith_01_Moving Forward_004.png",
+            "images/player-sprite/Wraith_01_Moving Forward_005.png",
+            "images/player-sprite/Wraith_01_Moving Forward_006.png",
+            "images/player-sprite/Wraith_01_Moving Forward_007.png",
+            "images/player-sprite/Wraith_01_Moving Forward_008.png",
+            "images/player-sprite/Wraith_01_Moving Forward_009.png",
+            "images/player-sprite/Wraith_01_Moving Forward_010.png",
+            "images/player-sprite/Wraith_01_Moving Forward_011.png",
+
+        ];
+
+        let playerDeadFrame = [
+            "images/player-sprite/Wraith_01_Dying_000.png",
+            "images/player-sprite/Wraith_01_Dying_001.png",
+            "images/player-sprite/Wraith_01_Dying_002.png",
+            "images/player-sprite/Wraith_01_Dying_003.png",
+            "images/player-sprite/Wraith_01_Dying_004.png",
+            "images/player-sprite/Wraith_01_Dying_005.png",
+            "images/player-sprite/Wraith_01_Dying_006.png",
+            "images/player-sprite/Wraith_01_Dying_007.png",
+            "images/player-sprite/Wraith_01_Dying_008.png",
+            "images/player-sprite/Wraith_01_Dying_009.png",
+            "images/player-sprite/Wraith_01_Dying_010.png",
+            "images/player-sprite/Wraith_01_Dying_011.png",
+            "images/player-sprite/Wraith_01_Dying_012.png",
+            "images/player-sprite/Wraith_01_Dying_013.png",
+            "images/player-sprite/Wraith_01_Dying_014.png"
+        ];
+
+        let monsterWalkFrame = [
+            "images/monster-sprite/Wraith_02_Moving Forward_000.png",
+            "images/monster-sprite/Wraith_02_Moving Forward_001.png",
+            "images/monster-sprite/Wraith_02_Moving Forward_002.png",
+            "images/monster-sprite/Wraith_02_Moving Forward_003.png",
+            "images/monster-sprite/Wraith_02_Moving Forward_004.png",
+            "images/monster-sprite/Wraith_02_Moving Forward_005.png",
+            "images/monster-sprite/Wraith_02_Moving Forward_006.png",
+            "images/monster-sprite/Wraith_02_Moving Forward_007.png",
+            "images/monster-sprite/Wraith_02_Moving Forward_008.png",
+            "images/monster-sprite/Wraith_02_Moving Forward_009.png",
+            "images/monster-sprite/Wraith_02_Moving Forward_010.png",
+            "images/monster-sprite/Wraith_02_Moving Forward_011.png"
+        ];
+
+        let monsterDeadFrame = [
+            "images/monster-sprite/Wraith_02_Dying_000.png",
+            "images/monster-sprite/Wraith_02_Dying_001.png",
+            "images/monster-sprite/Wraith_02_Dying_002.png",
+            "images/monster-sprite/Wraith_02_Dying_003.png",
+            "images/monster-sprite/Wraith_02_Dying_004.png",
+            "images/monster-sprite/Wraith_02_Dying_005.png",
+            "images/monster-sprite/Wraith_02_Dying_006.png",
+            "images/monster-sprite/Wraith_02_Dying_007.png",
+            "images/monster-sprite/Wraith_02_Dying_008.png",
+            "images/monster-sprite/Wraith_02_Dying_009.png",
+            "images/monster-sprite/Wraith_02_Dying_010.png",
+            "images/monster-sprite/Wraith_02_Dying_011.png",
+            "images/monster-sprite/Wraith_02_Dying_012.png",
+            "images/monster-sprite/Wraith_02_Dying_013.png",
+            "images/monster-sprite/Wraith_02_Dying_014.png"
+
+        ];
+        let screenRatio;
+        let playerSheet = monsterSheet = [];
+        let player;
+        let isPlayerDying = false;
+        let keys = [];
+        let monsters = [];
+        let monsterCnt = 25;
+        let flames = [];
+        let flameSpeed = 10;
+
+        let bg;
+        let bgSpeed;
+        let monsterSpeed;
+        let playerSpeed;
+
+        let gameDivWidth = document.querySelector('#gameDiv').offsetWidth;
+        let gameDivHeight = document.querySelector('#gameDiv').offsetHeight;
+
+        let score = 0;
+
+        app.loader
+            .add("bg", "images/sky.png")
+            .add("flame", "images/player-sprite/flame_ori.png")
+            .add(playerWalkFrame)
+            .add(playerDeadFrame)
+            .add(monsterWalkFrame)
+            .add(monsterDeadFrame);
+
+        app.loader.onComplete.add(loadComplete);
+        app.loader.load();
+
+        window.addEventListener("keydown", keysDown);
+        window.addEventListener("keyup", keysUp);
+        document.addEventListener('keypress', keyPress);
+
+        function keysDown(e) {
+            keys[e.keyCode] = true;
+        }
+        function keysUp(e) {
+            keys[e.keyCode] = false;
+        }
+        function keyPress(e) {
+            if (e.keyCode == 32) {
+                playerAttack();
+            }
+        }
+
+        function getRandom(min, max) {
+            return Math.floor(Math.random() * max) + min;
+        };
+
+        function gameLoop(e) {
+            bg.tilePosition.x -= bgSpeed;
+            updatePlayer()
+            updateFlames();
+            updateMonsters();
+            if(isGameFiniish()){
+                app.ticker.remove(gameLoop);
+                gameOver();
+            }
+            
+            if (player.dead) {
+                bgSpeed = monsterSpeed = 0;
+                if (!isPlayerDying) {
+                    player.textures = playerSheet['playerDead'];
+                    player.loop = false;
+                    player.play();
+                    isPlayerDying = true;
+                }
+
+                for (let i = 0; i < monsters.length; i++) {
+                    let monster = monsters[i];
+                    monster.stop();
+                }
+                if (player.y - player.height / 2 < gameDivHeight) {
+                    player.y += 5;
+                } else {
+                    app.ticker.remove(gameLoop);
+                    gameOver();
+                }
+
+            }
+        }
+
+        function loadComplete() {
+            bg = createBg();
+            createplayerSheet();
+            createMonsterSheet();
+            createStartContainer();
+            startContainer.visible = true;
+            gameContainer.visible = true;
+            gameOverContainer.visible = false;
+        }
+        function initGame() {
+            console.log('initGame');
+            startContainer.visible = false;
+            gameContainer.interactive = true;
+            bgSpeed = 5;
+            monsterSpeed = 10;
+            playerSpeed = 6;
+            createplayer();
+            createMonsters();
+            app.ticker.add(gameLoop);
+        }
+
+        function createBg() {
+            screenRatio = window.outerHeight / 980;
+            texture = app.loader.resources["bg"].texture;
+            tilingWidth = gameDivWidth;
+            tilingHeight = gameDivHeight;
+            let tiling = new PIXI.TilingSprite(texture, tilingWidth, tilingHeight);
+            tiling.anchor.set(0, 1);
+            tiling.y = app.screen.height;
+            gameContainer.addChild(tiling);
+            return tiling;
+        }
+
+        function createplayerSheet() {
+            let textureAry = [];
+            for (let i = 0; i < playerWalkFrame.length; i++) {
+                let texture = new PIXI.Texture.from(playerWalkFrame[i]);
+                textureAry.push(texture);
+            };
+            playerSheet['playerWalk'] = textureAry;
+
+            textureAry = [];
+            for (let i = 0; i < playerDeadFrame.length; i++) {
+                let texture = new PIXI.Texture.from(playerDeadFrame[i]);
+                textureAry.push(texture);
+            };
+            playerSheet['playerDead'] = textureAry;
+        }
+
+        function createMonsterSheet() {
+            let textureAry = [];
+            for (let i = 0; i < monsterWalkFrame.length; i++) {
+                let texture = new PIXI.Texture.from(monsterWalkFrame[i]);
+                textureAry.push(texture);
+            };
+            monsterSheet['monsterWalk'] = textureAry;
+
+            textureAry = [];
+            for (let i = 0; i < monsterDeadFrame.length; i++) {
+                let texture = new PIXI.Texture.from(monsterDeadFrame[i]);
+                textureAry.push(texture);
+            };
+            monsterSheet['monsterDead'] = textureAry;
+        }
+
+        function createplayer() {
+
+            player = new PIXI.AnimatedSprite(playerSheet['playerWalk']);
+            player.anchor.set(0.5);
+            player.scale.x = 0.4;
+            player.scale.y = 0.4;
+            player.animationSpeed = 0.3;
+            player.x = app.view.width / 2 - 500;
+            player.y = (app.view.height - 220) * screenRatio;
+            player.play();
+            gameContainer.addChild(player);
+        }
+
+        function createMonsters() {
+            let monsterPos = 500;
+            for (let i = 0; i < monsterCnt; i++) {
+                let monster = new PIXI.AnimatedSprite(monsterSheet['monsterWalk']);
+                monster.anchor.set(0.5);
+                monster.scale.x = 0.4;
+                monster.scale.y = 0.4;
+                monster.scale.x *= -1;
+                monster.animationSpeed = 0.3;
+                monster.x = app.view.width / 2 + monsterPos;
+                mosterPositionYMin = monster.height + 40;
+                mosterPositionYMax = gameDivHeight - monster.height - monster.height / 2;
+                mosterPositionY = getRandom(mosterPositionYMin, mosterPositionYMax);
+                monster.y = mosterPositionY;
+                monster.play();
+                gameContainer.addChild(monster);
+                monsters.push(monster);
+                monsterMargin = getRandom(200, 500);
+                monsterPos += monsterMargin;
+            }
+
+        }
+
+        function boxesIntersect(a, b) {
+            let aBound = a.getBounds();
+            let bBound = b.getBounds();
+            return aBound.x + aBound.width / 2 > bBound.x
+                && aBound.x < bBound.x + bBound.width / 2
+                && aBound.y + aBound.height / 2 > bBound.y
+                && aBound.y < bBound.y + bBound.height / 2;
+        }
+
+        function updatePlayer() {
+            if (!player.dead) {
+                if (keys['40'] || keys['83']) { //down, s
+                    if (player.y + player.height / 2 + 5 <= gameDivHeight) {
+                        player.y += playerSpeed;
+                    }
+                }
+                if (keys['38'] || keys['87']) { //up, w
+                    if (player.y - player.height / 2 - 5 >= 0) {
+                        player.y -= playerSpeed;
+                    }
+                }
+                if (keys['37'] || keys['65']) { //left, a
+                    if (player.x - 5 >= 0) {
+                        player.x -= playerSpeed;
+                    }
+
+                }
+                if (keys['39'] || keys['68']) { //right, d
+                    if (player.x + player.width / 2 + 5 <= gameDivWidth) {
+                        player.x += playerSpeed;
+                    }
+                }
+            }
+
+            for (let i = 0; i < monsters.length; i++) {
+                let monster = monsters[i];
+                if (!monster.dead && boxesIntersect(player, monster)) {
+                    console.log('dead');
+
+                    player.dead = true;
+
+                }
+            }
+        }
+
+
+        function updateMonsters() {
+            for (let i = 0; i < monsters.length; i++) {
+                let monster = monsters[i];
+                monster.x -= monsterSpeed;
+                if(monster.x + monster.width / 2 < 0 &&　!monster.dead){
+                    monster.alive = true;
+                }
+                if (monster.dead) {
+                    monster.y += 5;
+                }
+                for (let j = 0; j < flames.length; j++) {
+                    if (!monster.dead
+                        && boxesIntersect(flames[j], monster)) {
+                        monster.textures = monsterSheet['monsterDead'];
+                        monster.loop = false;
+                        monster.play();
+                        monster.dead = true;
+
+                        gameContainer.removeChild(flames[j]);
+                        flames.splice(j, 1);
+
+                        score += 10;
+                    }
+
+                }
+            }
+        }
+
+        function playerAttack() {
+            let flame = createFlame();
+            flames.push(flame);
+        }
+
+        function createFlame() {
+            flame = new PIXI.Sprite.from(app.loader.resources["flame"].texture);
+            flame.anchor.set(0.5);
+            flame.scale.x = 0.05;
+            flame.scale.y = 0.05;
+            flame.x = player.x + player.width / 2 - 60;
+            flame.y = player.y;
+            flame.speed = flameSpeed;
+            gameContainer.addChild(flame);
+            return flame
+        }
+
+        function updateFlames() {
+            for (let i = 0; i < flames.length; i++) {
+
+                flames[i].x += flames[i].speed;
+                if (flames[i].x > app.view.width) {
+                    flames[i].dead = true;
+                }
+            }
+            for (let i = 0; i < flames.length; i++) {
+                if (flames[i].dead) {
+                    gameContainer.removeChild(flames[i]);
+                    flames.splice(i, 1);
+                }
+            }
+
+        }
+
+        function createStartContainer() {
+            /*start container*/
+            let bgMask = new PIXI.Graphics();
+            bgMask.beginFill(0x000000, 0.5);
+            maskWidth = document.querySelector('#gameDiv').offsetWidth;
+            maskHeight = document.querySelector('#gameDiv').offsetHeight;
+            bgMask.drawRect(0, 0, maskWidth, maskHeight);
+            bgMask.endFill();
+            startContainer.addChild(bgMask);
+
+            let ruleTextStyle = new PIXI.TextStyle({
+                fontFamily: 'Arial',
+                fontSize: 25,
+                fill: '#fff',
+                fontWeight: 'bold',
+                lineHeight: '4'
+            });
+            let ruleText = new PIXI.Text('規則說明:\n1.利用方向鍵移動鬼魂\n2.按下空白鍵可發射火焰射擊敵人', ruleTextStyle);
+            ruleText.anchor.set(0.5);
+            ruleText.x = gameDivWidth / 2;
+            ruleText.y = gameDivHeight / 2 - 150;
+
+            startContainer.addChild(ruleText);
+
+
+            let startButtonTexture = PIXI.Texture.from('images/start.png');
+            let startBtn = new PIXI.Sprite(startButtonTexture);
+            startBtn.anchor.set(0.5);
+            startBtn.x = document.querySelector('#gameDiv').offsetWidth / 2;
+            startBtn.y = document.querySelector('#gameDiv').offsetHeight / 2;
+            startBtn.interactive = true;
+            startBtn.buttonMode = true;
+            startContainer.addChild(startBtn);
+            startBtn.on('click', initGame);
+        }
+        function createGameOverContainer() {
+            /*reset container*/
+            let bgMask = new PIXI.Graphics();
+            bgMask.beginFill(0x000000, 0.5);
+            maskWidth = document.querySelector('#gameDiv').offsetWidth;
+            maskHeight = document.querySelector('#gameDiv').offsetHeight;
+            bgMask.drawRect(0, 0, maskWidth, maskHeight);
+            bgMask.endFill();
+            gameOverContainer.addChild(bgMask);
+
+            let scoreTextStyle = new PIXI.TextStyle({
+                fontFamily: 'Arial',
+                fontSize: 40,
+                fill: '#fff',
+                fontWeight: 'bold'
+            });
+            let scoreText = new PIXI.Text('Score: ' + score, scoreTextStyle);
+            scoreText.anchor.set(0.5);
+            scoreText.x = gameDivWidth / 2;
+            scoreText.y = gameDivHeight / 2 - 100;
+
+            gameOverContainer.addChild(scoreText);
+
+            let againButtonTexture = PIXI.Texture.from('images/again.png');
+            let againBtn = new PIXI.Sprite(againButtonTexture);
+            againBtn.anchor.set(0.5);
+            againBtn.x = document.querySelector('#gameDiv').offsetWidth / 2;
+            againBtn.y = document.querySelector('#gameDiv').offsetHeight / 2;
+            againBtn.interactive = true;
+            againBtn.buttonMode = true;
+            gameOverContainer.addChild(againBtn);
+            againBtn.on('click', resetGame);
+
+        }
+
+        function isGameFiniish(){
+            let monsterDeadCnt = 0;
+            let monsterAliveCnt = 0;
+
+            monsters.forEach( (monster) => {
+                if(monster.dead){
+                    monsterDeadCnt++;
+                }
+                if(monster.alive){
+                    monsterAliveCnt++;
+                }
+            });
+            if(monsterDeadCnt + monsterAliveCnt >= monsterCnt){
+                return true;
+            }
+            return false;
+        }
+        function gameOver() {
+            createGameOverContainer();
+            gameContainer.interactive = false;
+            gameOverContainer.visible = true;
+        }
+
+        function resetGame() {
+            for (let i = 0; i < monsters.length; i++) {
+                let monster = monsters[i];
+                gameContainer.removeChild(monster);
+
+            }
+            for (let i = 0; i < flames.length; i++) {
+                let flame = flames[i];
+                gameContainer.removeChild(flame);
+            }
+            gameContainer.removeChild(player);
+            monsters = [];
+            flames = [];
+            score = 0;
+            gameOverContainer.visible = false;
+            isPlayerDying = false;
+
+            gameOverContainer.removeChildren();
+
+            initGame();
+        }
+
+    };
+
+
+
+</script>
+
+</html>
